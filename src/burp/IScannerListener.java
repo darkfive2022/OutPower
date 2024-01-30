@@ -1,0 +1,6 @@
+package burp;
+
+/* loaded from: xia_yue.-1.2.jdk8.jar:burp/IScannerListener.class */
+public interface IScannerListener {
+    void newScanIssue(IScanIssue iScanIssue);
+}
