@@ -1,0 +1,10 @@
+<component name="ArtifactManager">
+  <artifact name="Outp:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Outp_jar</output-path>
+    <root id="root">
+      <element id="archive" name="Outp.jar">
+        <element id="module-output" name="OutpowerV1" />
+      </element>
+    </root>
+  </artifact>
+</component>
