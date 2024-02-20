@@ -338,47 +338,65 @@ public class BurpExtender extends AbstractTableModel implements IBurpExtender, I
          */
         IRequestInfo analyIRequestInfo1 = this.helpers.analyzeRequest(baseRequestResponse);
         URL url = analyIRequestInfo1.getUrl();
-        String path = url.getPath();
+        // String path = url.getPath();
+        String path = url.toString();
         String lastPart = path.substring(path.lastIndexOf("/") + 1);
+        this.stdout.println("lastpart="+lastPart);
         int path_len = lastPart.length();
         boolean isInt = lastPart.matches("^\\d+$");
-        String formattedNumber;
-        String result;
+        String result="";
+        String result1="";
         int[] arr1 = new int[3];
         IResponseInfo iResponseInfo1 = null;
         IHttpRequestResponse requestResponse_z = null;
-        if(isInt){
-            int res = Integer.parseInt(lastPart)+1;
-            result = String.format("%0"+path_len+"d", res);
-            IResponseInfo iResponseInfo = this.helpers.analyzeResponse(baseRequestResponse.getResponse());
-            String originalRequest = new String(baseRequestResponse.getRequest());
-            // 修改请求路径,
-            String modifiedRequest = originalRequest.replace(lastPart, result);
-            byte[] b1 = modifiedRequest.getBytes();
-            IHttpService iHttpService1 = baseRequestResponse.getHttpService();
-            requestResponse_z = this.callbacks.makeHttpRequest(iHttpService1,b1);
-            iResponseInfo1 = this.helpers.analyzeResponse(requestResponse_z.getResponse());
+        try{
+            if(isInt){
+                String originalRequest = new String(baseRequestResponse.getRequest());
+                //多次fuzz判断越权
+                for (int i = 0 ; i < 3 ; i++ ){
+                    int result1_index = Integer.parseInt(lastPart)+i+1;
+                    result1 = String.format("%0"+path_len+"d", result1_index);
+                    String modifiedRequest1 = originalRequest.replace(lastPart, result1);
+                    byte[] b2 = modifiedRequest1.getBytes();
+                    IHttpService iHttpService2 = baseRequestResponse.getHttpService();
+                    IHttpRequestResponse requestResponse_t = this.callbacks.makeHttpRequest(iHttpService2,b2);
+                    IResponseInfo iResponseInfo2 = this.helpers.analyzeResponse(requestResponse_t.getResponse());
+                    int new_resp1 = requestResponse_t.getResponse().length;
+                    int body_len = iResponseInfo2.getBodyOffset();
+                    int low_len3 = new_resp1 - body_len;
+                    arr1[i] = low_len3;
+                    this.stdout.println("arr1["+i+"]"+"="+arr1[i]);
+                }
+                int res = Integer.parseInt(lastPart)+1;
+                result = String.format("%0"+path_len+"d", res);
+                IResponseInfo iResponseInfo = this.helpers.analyzeResponse(baseRequestResponse.getResponse());
+                // 修改请求路径,
+                String modifiedRequest = originalRequest.replace(lastPart, result);
+                byte[] b1 = modifiedRequest.getBytes();
+                IHttpService iHttpService1 = baseRequestResponse.getHttpService();
+                requestResponse_z = this.callbacks.makeHttpRequest(iHttpService1,b1);
+                iResponseInfo1 = this.helpers.analyzeResponse(requestResponse_z.getResponse());
 
-            //多次fuzz判断越权
-            for (int i = 0 ; i < arr1.length ; i++ ){
-                String result1 = String.valueOf((Integer.parseInt(lastPart)+i+1));
-                String modifiedRequest1 = originalRequest.replace(lastPart, result1);
-                byte[] b2 = modifiedRequest1.getBytes();
-                IHttpService iHttpService2 = requestResponse_z.getHttpService();
-                IHttpRequestResponse requestResponse_t = this.callbacks.makeHttpRequest(iHttpService2,b2);
-                IResponseInfo iResponseInfo2 = this.helpers.analyzeResponse(requestResponse_t.getResponse());
-                int new_resp1 = requestResponse_t.getResponse().length;
-                int low_len3 = new_resp1 - iResponseInfo2.getBodyOffset();
-                arr1[i] = low_len3;
-                this.stdout.println("arr"+(i+1)+"="+arr1[i]+"result1="+result1);
+            }else {
+                result = lastPart;
+                IResponseInfo iResponseInfo = this.helpers.analyzeResponse(baseRequestResponse.getResponse());
+                String originalRequest = new String(baseRequestResponse.getRequest());
+                // 修改请求路径,
+                byte[] b1 = originalRequest.getBytes();
+                IHttpService iHttpService1 = baseRequestResponse.getHttpService();
+                iResponseInfo1 = this.helpers.analyzeResponse(baseRequestResponse.getResponse());
+                requestResponse_z = this.callbacks.makeHttpRequest(iHttpService1,b1);
             }
-        }else {
-            result = lastPart;
+        }catch (Exception e){
+            System.out.println(e.getStackTrace());
         }
 
-        if (iResponseInfo1.getStatusCode() != 200 || iResponseInfo1 == null){//|| equal_Arr_Result
+
+        if (iResponseInfo1.getStatusCode() != 200 ){//|| equal_Arr_Result
                 is_vuln = "❌";
         }else if(result.equals(lastPart)){
+                is_vuln = "❌";
+        }else if (checkArrayValues(arr1)){
                 is_vuln = "❌";
         }
 
